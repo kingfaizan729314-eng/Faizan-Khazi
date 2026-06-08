@@ -1,0 +1,53 @@
+// AdminCustomers.jsx
+import React, { useEffect, useState } from 'react';
+import api from '../../utils/api';
+import './Admin.css';
+
+export function AdminCustomers() {
+  const [customers, setCustomers] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, total: 0 });
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get(`/admin/customers?page=${page}&limit=20&search=${search}`)
+      .then(res => { setCustomers(res.data.data || []); setPagination(res.data.pagination || {}); })
+      .finally(() => setLoading(false));
+  }, [page, search]);
+
+  return (
+    <div>
+      <h1 className="admin-page-title">Customers</h1>
+      <div className="admin-card">
+        <div className="table-toolbar">
+          <input className="toolbar-search" placeholder="Search by name or email..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+          <span style={{ fontSize: '0.875rem', color: '#64748b' }}>{pagination.total} total customers</span>
+        </div>
+        {loading ? <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading...</div> : (
+          <table className="admin-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Total Spent</th><th>Joined</th></tr></thead>
+            <tbody>
+              {customers.map(c => (
+                <tr key={c._id}>
+                  <td style={{ fontWeight: 600 }}>{c.name}</td>
+                  <td>{c.email}</td>
+                  <td>{c.phone || '—'}</td>
+                  <td>{c.order_count}</td>
+                  <td>${c.total_spent?.toFixed(2)}</td>
+                  <td>{new Date(c.createdAt).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <div className="table-pagination">
+          <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+          <span>Page {page}</span>
+          <button className="page-btn" disabled={customers.length < 20} onClick={() => setPage(p => p + 1)}>Next</button>
+        </div>
+      </div>
+    </div>
+  );
+}

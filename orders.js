@@ -1,0 +1,9 @@
+NODE_ENV=development
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/techstore
+JWT_SECRET=your_super_secret_jwt_key_change_in_production_min_32_chars
+JWT_EXPIRES_IN=7d
+ADMIN_EMAIL=admin@techstore.com
+ADMIN_PASSWORD=Admin@123456
+UPLOAD_PATH=./public/images/uploads
+MAX_FILE_SIZE=5242880

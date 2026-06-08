@@ -1,0 +1,232 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Star, ShoppingCart, ArrowLeft, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import api from '../utils/api';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import ProductCard from '../components/common/ProductCard';
+import toast from 'react-hot-toast';
+import './ProductDetail.css';
+
+export default function ProductDetail() {
+  const { slug } = useParams();
+  const { addToCart, loading: cartLoading } = useCart();
+  const { user } = useAuth();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [qty, setQty] = useState(1);
+  const [activeImg, setActiveImg] = useState(0);
+  const [review, setReview] = useState({ rating: 5, title: '', body: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    api.get(`/products/${slug}`)
+      .then(res => { setProduct(res.data.data); setActiveImg(0); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  const handleAddToCart = () => addToCart(product._id, qty);
+
+  const submitReview = async (e) => {
+    e.preventDefault();
+    setSubmittingReview(true);
+    try {
+      await api.post(`/products/${product._id}/reviews`, review);
+      toast.success('Review submitted!');
+      const res = await api.get(`/products/${slug}`);
+      setProduct(res.data.data);
+      setReview({ rating: 5, title: '', body: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit review');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  if (loading) return (
+    <div className="container" style={{ padding: '4rem 1.5rem', textAlign: 'center' }}>
+      <div className="skeleton-card" style={{ height: 400 }} />
+    </div>
+  );
+
+  if (!product) return (
+    <div className="container" style={{ padding: '4rem 1.5rem', textAlign: 'center' }}>
+      <h2>Product not found</h2>
+      <Link to="/shop" className="btn-primary" style={{ marginTop: '1rem', display: 'inline-flex' }}>Back to Shop</Link>
+    </div>
+  );
+
+  const images = product.images?.length ? product.images : ['https://via.placeholder.com/600x400?text=No+Image'];
+  const discount = product.compare_price ? Math.round((1 - product.price / product.compare_price) * 100) : null;
+  const specs = product.specs || {};
+
+  return (
+    <div className="product-detail-page">
+      <div className="container">
+        <Link to="/shop" className="back-link"><ArrowLeft size={16} /> Back to Shop</Link>
+
+        <div className="product-detail">
+          {/* Images */}
+          <div className="product-images">
+            <div className="main-image">
+              <img src={images[activeImg]} alt={product.name} />
+              {images.length > 1 && (
+                <>
+                  <button className="img-nav prev" onClick={() => setActiveImg(i => Math.max(0, i - 1))}>
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button className="img-nav next" onClick={() => setActiveImg(i => Math.min(images.length - 1, i + 1))}>
+                    <ChevronRight size={20} />
+                  </button>
+                </>
+              )}
+            </div>
+            {images.length > 1 && (
+              <div className="thumb-strip">
+                {images.map((img, i) => (
+                  <button key={i} className={`thumb ${activeImg === i ? 'active' : ''}`} onClick={() => setActiveImg(i)}>
+                    <img src={img} alt="" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="product-info-panel">
+            <div className="product-brand-label">{product.brand}</div>
+            <h1>{product.name}</h1>
+
+            <div className="product-meta">
+              <div className="stars">
+                {[1,2,3,4,5].map(s => (
+                  <Star key={s} size={16} fill={s <= Math.round(product.rating) ? '#f59e0b' : 'none'} stroke="#f59e0b" />
+                ))}
+                <span>{product.rating?.toFixed(1)}</span>
+                <span className="review-count">({product.review_count} reviews)</span>
+              </div>
+              <span className={`stock-badge ${product.stock > 0 ? 'in-stock' : 'oos'}`}>
+                {product.stock > 0 ? <><Check size={13} /> In Stock</> : 'Out of Stock'}
+              </span>
+            </div>
+
+            <div className="price-block">
+              <span className="big-price">${product.price?.toFixed(2)}</span>
+              {product.compare_price && (
+                <>
+                  <span className="orig-price">${product.compare_price?.toFixed(2)}</span>
+                  <span className="discount-badge">-{discount}%</span>
+                </>
+              )}
+            </div>
+
+            {product.short_description && (
+              <p className="short-desc">{product.short_description}</p>
+            )}
+
+            {/* Qty + Add to cart */}
+            {product.stock > 0 && (
+              <div className="add-to-cart-row">
+                <div className="qty-control">
+                  <button onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
+                  <span>{qty}</span>
+                  <button onClick={() => setQty(q => Math.min(Math.min(product.stock, 10), q + 1))}>+</button>
+                </div>
+                <button className="btn-add-big" onClick={handleAddToCart} disabled={cartLoading}>
+                  <ShoppingCart size={18} />
+                  {cartLoading ? 'Adding...' : 'Add to Cart'}
+                </button>
+              </div>
+            )}
+
+            {/* Specs */}
+            {Object.keys(specs).length > 0 && (
+              <div className="specs-table">
+                <h3>Specifications</h3>
+                <table>
+                  <tbody>
+                    {Object.entries(specs).map(([k, v]) => (
+                      <tr key={k}>
+                        <td className="spec-key">{k.charAt(0).toUpperCase() + k.slice(1)}</td>
+                        <td className="spec-val">{v}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Description */}
+        {product.description && (
+          <div className="product-desc-section">
+            <h2>Description</h2>
+            <p>{product.description}</p>
+          </div>
+        )}
+
+        {/* Reviews */}
+        <div className="reviews-section">
+          <h2>Customer Reviews ({product.reviews?.length || 0})</h2>
+
+          {user && (
+            <form className="review-form" onSubmit={submitReview}>
+              <h3>Write a Review</h3>
+              <div className="star-select">
+                {[1,2,3,4,5].map(s => (
+                  <button type="button" key={s} onClick={() => setReview(r => ({ ...r, rating: s }))}>
+                    <Star size={20} fill={s <= review.rating ? '#f59e0b' : 'none'} stroke="#f59e0b" />
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text" placeholder="Title (optional)" value={review.title}
+                onChange={e => setReview(r => ({ ...r, title: e.target.value }))}
+                className="review-input"
+              />
+              <textarea
+                placeholder="Your review..." value={review.body}
+                onChange={e => setReview(r => ({ ...r, body: e.target.value }))}
+                className="review-textarea" rows={4}
+              />
+              <button type="submit" className="btn-primary" disabled={submittingReview}>
+                {submittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </form>
+          )}
+
+          <div className="reviews-list">
+            {(product.reviews || []).map((r, i) => (
+              <div key={i} className="review-card">
+                <div className="review-header">
+                  <div className="reviewer-name">{r.user_name}</div>
+                  <div className="review-stars">
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} size={13} fill={s <= r.rating ? '#f59e0b' : 'none'} stroke="#f59e0b" />
+                    ))}
+                  </div>
+                  <span className="review-date">{new Date(r.createdAt).toLocaleDateString()}</span>
+                </div>
+                {r.title && <div className="review-title">{r.title}</div>}
+                {r.body && <p className="review-body">{r.body}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Related */}
+        {product.related?.length > 0 && (
+          <div className="related-section">
+            <h2>Related Products</h2>
+            <div className="product-grid">
+              {product.related.map(p => <ProductCard key={p._id} product={p} />)}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

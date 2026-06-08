@@ -1,0 +1,175 @@
+import React, { useEffect, useState } from 'react';
+import { Plus, X } from 'lucide-react';
+import api from '../../utils/api';
+import toast from 'react-hot-toast';
+import './Admin.css';
+
+export default function AdminProducts() {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, total: 0 });
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({
+    name: '', brand: '', price: '', compare_price: '', cost_price: '',
+    stock: '', sku: '', category_id: '', description: '', short_description: '',
+    tags: '', is_active: true, is_featured: false,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(`/admin/products?page=${page}&limit=15&search=${search}`);
+      setProducts(res.data.data || []);
+      setPagination(res.data.pagination || {});
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, [page, search]);
+  useEffect(() => { api.get('/admin/categories').then(r => setCategories(r.data.data || [])); }, []);
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ name: '', brand: '', price: '', compare_price: '', cost_price: '', stock: '', sku: '', category_id: '', description: '', short_description: '', tags: '', is_active: true, is_featured: false });
+    setShowModal(true);
+  };
+
+  const openEdit = (p) => {
+    setEditing(p);
+    setForm({
+      name: p.name, brand: p.brand || '', price: p.price, compare_price: p.compare_price || '',
+      cost_price: p.cost_price || '', stock: p.stock, sku: p.sku || '',
+      category_id: p.category_id?._id || p.category_id || '',
+      description: p.description || '', short_description: p.short_description || '',
+      tags: (p.tags || []).join(', '), is_active: p.is_active, is_featured: p.is_featured,
+    });
+    setShowModal(true);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload = { ...form };
+      if (editing) {
+        await api.put(`/admin/products/${editing._id}`, payload);
+        toast.success('Product updated');
+      } else {
+        await api.post('/admin/products', payload);
+        toast.success('Product created');
+      }
+      setShowModal(false);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Save failed');
+    } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Deactivate this product?')) return;
+    try {
+      await api.delete(`/admin/products/${id}`);
+      toast.success('Product deactivated');
+      load();
+    } catch { toast.error('Failed'); }
+  };
+
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
+
+  return (
+    <div>
+      <h1 className="admin-page-title">Products</h1>
+      <div className="admin-card">
+        <div className="table-toolbar">
+          <input className="toolbar-search" placeholder="Search products..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+          <button className="card-header button" style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '0.45rem 1rem', borderRadius: '7px', cursor: 'pointer', fontWeight: '600', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }} onClick={openAdd}>
+            <Plus size={15} /> Add Product
+          </button>
+        </div>
+
+        {loading ? <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading...</div> : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th><th>Brand</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map(p => (
+                <tr key={p._id}>
+                  <td className="product-name-cell">{p.name}</td>
+                  <td>{p.brand}</td>
+                  <td>{p.category_id?.name || '—'}</td>
+                  <td>${p.price?.toFixed(2)}</td>
+                  <td className={p.stock <= 5 ? 'low-stock' : ''}>{p.stock}</td>
+                  <td><span className={`status-badge ${p.is_active ? 'green' : 'gray'}`}>{p.is_active ? 'Active' : 'Inactive'}</span></td>
+                  <td>
+                    <div className="action-cell">
+                      <button className="btn-edit" onClick={() => openEdit(p)}>Edit</button>
+                      <button className="btn-delete" onClick={() => handleDelete(p._id)}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        <div className="table-pagination">
+          <span>Showing {products.length} of {pagination.total}</span>
+          <button className="page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Prev</button>
+          <span>Page {page}</span>
+          <button className="page-btn" disabled={products.length < 15} onClick={() => setPage(p => p + 1)}>Next</button>
+        </div>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2>{editing ? 'Edit Product' : 'Add Product'}</h2>
+              <button className="modal-close" onClick={() => setShowModal(false)}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleSave}>
+              <div className="admin-form-grid">
+                <div className="admin-form-group full"><label>Name *</label><input required value={form.name} onChange={set('name')} /></div>
+                <div className="admin-form-group"><label>Brand</label><input value={form.brand} onChange={set('brand')} /></div>
+                <div className="admin-form-group"><label>SKU</label><input value={form.sku} onChange={set('sku')} /></div>
+                <div className="admin-form-group"><label>Price *</label><input type="number" step="0.01" required value={form.price} onChange={set('price')} /></div>
+                <div className="admin-form-group"><label>Compare Price</label><input type="number" step="0.01" value={form.compare_price} onChange={set('compare_price')} /></div>
+                <div className="admin-form-group"><label>Cost Price</label><input type="number" step="0.01" value={form.cost_price} onChange={set('cost_price')} /></div>
+                <div className="admin-form-group"><label>Stock *</label><input type="number" required value={form.stock} onChange={set('stock')} /></div>
+                <div className="admin-form-group"><label>Category</label>
+                  <select value={form.category_id} onChange={set('category_id')}>
+                    <option value="">— None —</option>
+                    {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="admin-form-group full"><label>Tags (comma-separated)</label><input value={form.tags} onChange={set('tags')} placeholder="laptop, gaming, rgb" /></div>
+                <div className="admin-form-group full"><label>Short Description</label><input value={form.short_description} onChange={set('short_description')} /></div>
+                <div className="admin-form-group full"><label>Description</label><textarea rows={3} value={form.description} onChange={set('description')} /></div>
+                <div className="admin-form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                  <input type="checkbox" id="is_active" checked={form.is_active} onChange={set('is_active')} />
+                  <label htmlFor="is_active">Active</label>
+                </div>
+                <div className="admin-form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
+                  <input type="checkbox" id="is_featured" checked={form.is_featured} onChange={set('is_featured')} />
+                  <label htmlFor="is_featured">Featured</label>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn-save" disabled={saving}>{saving ? 'Saving...' : 'Save Product'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

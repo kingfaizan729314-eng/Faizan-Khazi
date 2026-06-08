@@ -1,0 +1,148 @@
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Package, Tag, ShoppingBag, Users, Ticket, LogOut, Menu, X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../utils/api';
+import './Admin.css';
+
+const NAV = [
+  { to: '/admin', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+  { to: '/admin/products', label: 'Products', icon: <Package size={18} /> },
+  { to: '/admin/categories', label: 'Categories', icon: <Tag size={18} /> },
+  { to: '/admin/orders', label: 'Orders', icon: <ShoppingBag size={18} /> },
+  { to: '/admin/customers', label: 'Customers', icon: <Users size={18} /> },
+  { to: '/admin/coupons', label: 'Coupons', icon: <Ticket size={18} /> },
+];
+
+export function AdminLayout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+
+  if (!user || user.role !== 'admin') {
+    navigate('/');
+    return null;
+  }
+
+  return (
+    <div className="admin-layout">
+      <aside className={`admin-sidebar ${open ? 'open' : ''}`}>
+        <div className="admin-logo">⚡ TechStore Admin</div>
+        <nav className="admin-nav">
+          {NAV.map(n => (
+            <Link
+              key={n.to}
+              to={n.to}
+              className={`admin-nav-item ${location.pathname === n.to ? 'active' : ''}`}
+              onClick={() => setOpen(false)}
+            >
+              {n.icon} {n.label}
+            </Link>
+          ))}
+        </nav>
+        <button className="admin-logout" onClick={() => { logout(); navigate('/'); }}>
+          <LogOut size={18} /> Logout
+        </button>
+      </aside>
+      <main className="admin-main">
+        <div className="admin-topbar">
+          <button className="admin-menu-toggle" onClick={() => setOpen(!open)}>
+            {open ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <span className="admin-user">👤 {user.name}</span>
+        </div>
+        <div className="admin-content">
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ── Dashboard Home ────────────────────────────────────────────────────────────
+export default function AdminDashboard() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/admin/dashboard').then(res => setData(res.data.data)).finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="admin-loading">Loading dashboard...</div>;
+
+  const { stats, recent_orders, top_products, revenue_chart } = data;
+
+  const statCards = [
+    { label: 'Total Revenue', value: `$${stats.total_revenue?.toFixed(2)}`, color: 'blue' },
+    { label: "Today's Revenue", value: `$${stats.today_revenue?.toFixed(2)}`, color: 'green' },
+    { label: 'Total Orders', value: stats.total_orders, color: 'purple' },
+    { label: 'Pending Orders', value: stats.pending_orders, color: 'yellow' },
+    { label: 'Total Products', value: stats.total_products, color: 'blue' },
+    { label: 'Low Stock', value: stats.low_stock, color: 'red' },
+    { label: 'Customers', value: stats.total_customers, color: 'purple' },
+    { label: 'New Today', value: stats.new_customers_today, color: 'green' },
+  ];
+
+  const STATUS_COLORS = { pending: 'yellow', processing: 'blue', shipped: 'purple', delivered: 'green', cancelled: 'red' };
+
+  return (
+    <div>
+      <h1 className="admin-page-title">Dashboard</h1>
+
+      {/* Stat cards */}
+      <div className="stat-grid">
+        {statCards.map((s, i) => (
+          <div key={i} className={`stat-card ${s.color}`}>
+            <div className="stat-value">{s.value}</div>
+            <div className="stat-label">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="dashboard-grid">
+        {/* Recent orders */}
+        <div className="admin-card">
+          <div className="card-header">
+            <h3>Recent Orders</h3>
+            <Link to="/admin/orders">View All</Link>
+          </div>
+          <table className="admin-table">
+            <thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody>
+              {recent_orders.map(o => (
+                <tr key={o._id}>
+                  <td>#{o.order_number}</td>
+                  <td>{o.user_id?.name || 'Guest'}</td>
+                  <td>${o.total?.toFixed(2)}</td>
+                  <td><span className={`status-badge ${STATUS_COLORS[o.status]}`}>{o.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Top products */}
+        <div className="admin-card">
+          <div className="card-header">
+            <h3>Top Products</h3>
+            <Link to="/admin/products">View All</Link>
+          </div>
+          <table className="admin-table">
+            <thead><tr><th>Product</th><th>Sold</th><th>Stock</th><th>Price</th></tr></thead>
+            <tbody>
+              {top_products.map(p => (
+                <tr key={p._id}>
+                  <td className="product-name-cell">{p.name}</td>
+                  <td>{p.sold_count}</td>
+                  <td className={p.stock <= 5 ? 'low-stock' : ''}>{p.stock}</td>
+                  <td>${p.price?.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,86 @@
+.checkout-page { padding: 2rem 0 4rem; }
+.checkout-page h1 { font-size: 1.5rem; font-weight: 700; color: #0f172a; margin-bottom: 1.75rem; }
+
+.checkout-layout { display: grid; grid-template-columns: 1fr 360px; gap: 2rem; align-items: start; }
+
+.checkout-section { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; }
+.checkout-section h2 { font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 1.25rem; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+.form-group.full { grid-column: 1 / -1; }
+.form-group label { font-size: 0.82rem; font-weight: 600; color: #374151; }
+.form-group input, .form-group select {
+  padding: 0.6rem 0.875rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
+
+/* Payment */
+.payment-options { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+.payment-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.15s;
+}
+.payment-option.selected { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+.payment-option input { accent-color: #3b82f6; }
+
+.card-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.card-fields .form-group.full { grid-column: 1 / -1; }
+
+.notes-input { width: 100%; padding: 0.65rem 0.875rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; font-family: inherit; outline: none; resize: vertical; }
+.notes-input:focus { border-color: #3b82f6; }
+
+/* Summary */
+.order-summary { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; position: sticky; top: 80px; }
+.order-summary h3 { font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+
+.order-items { display: flex; flex-direction: column; gap: 0.875rem; margin-bottom: 1.25rem; max-height: 280px; overflow-y: auto; }
+.order-item { display: flex; align-items: center; gap: 0.75rem; }
+.order-item img { width: 48px; height: 48px; object-fit: cover; border-radius: 7px; background: #f8fafc; flex-shrink: 0; }
+.oi-details { flex: 1; min-width: 0; }
+.oi-name { display: block; font-size: 0.82rem; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oi-qty { font-size: 0.78rem; color: #9ca3af; }
+.oi-price { font-size: 0.875rem; font-weight: 600; color: #0f172a; white-space: nowrap; }
+
+/* Coupon */
+.coupon-row { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+.coupon-input { flex: 1; padding: 0.5rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 7px; font-size: 0.875rem; outline: none; font-family: inherit; letter-spacing: 0.05em; }
+.coupon-input:focus { border-color: #3b82f6; }
+.coupon-btn { padding: 0.5rem 1rem; background: #0f172a; color: #fff; border: none; border-radius: 7px; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+.coupon-btn:hover { background: #1e293b; }
+.coupon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.coupon-applied { font-size: 0.8rem; color: #16a34a; font-weight: 600; margin-bottom: 1rem; }
+
+/* Summary lines */
+.summary-lines { border-top: 1px solid #f1f5f9; padding-top: 1rem; margin-top: 0.5rem; }
+.summary-row { display: flex; justify-content: space-between; font-size: 0.875rem; color: #374151; margin-bottom: 0.6rem; }
+.summary-row em { color: #16a34a; font-style: normal; font-weight: 600; }
+.summary-row.discount { color: #16a34a; }
+.summary-total { display: flex; justify-content: space-between; font-size: 1.05rem; font-weight: 800; color: #0f172a; padding-top: 0.875rem; border-top: 2px solid #e2e8f0; margin-top: 0.5rem; }
+
+.btn-place-order { width: 100%; margin-top: 1.25rem; padding: 0.875rem; background: #3b82f6; color: #fff; border: none; border-radius: 9px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+.btn-place-order:hover { background: #2563eb; }
+.btn-place-order:disabled { background: #93c5fd; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .checkout-layout { grid-template-columns: 1fr; }
+  .order-summary { position: static; }
+}
+@media (max-width: 560px) {
+  .form-grid { grid-template-columns: 1fr; }
+  .form-group.full { grid-column: 1; }
+}

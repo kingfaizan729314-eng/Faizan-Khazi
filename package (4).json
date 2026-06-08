@@ -1,0 +1,196 @@
+require('dotenv').config();
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+async function seed() {
+  await mongoose.connect(process.env.MONGO_URI);
+  console.log('✅ Connected to MongoDB');
+
+  const User = require('../models/User');
+  const Category = require('../models/Category');
+  const Product = require('../models/Product');
+  const Coupon = require('../models/Coupon');
+
+  // Clear existing data
+  await Promise.all([
+    User.deleteMany({}),
+    Category.deleteMany({}),
+    Product.deleteMany({}),
+    Coupon.deleteMany({}),
+  ]);
+  console.log('🗑️  Cleared existing data');
+
+  // Admin user
+  await User.create({
+    name: 'Admin',
+    email: process.env.ADMIN_EMAIL || 'admin@techstore.com',
+    password: process.env.ADMIN_PASSWORD || 'Admin@123456',
+    role: 'admin',
+  });
+  console.log('👤 Admin user created');
+
+  // Categories
+  const categoryData = [
+    { name: 'Laptops', slug: 'laptops', description: 'High-performance laptops for work and gaming', sort_order: 1 },
+    { name: 'Smartphones', slug: 'smartphones', description: 'Latest flagship and mid-range smartphones', sort_order: 2 },
+    { name: 'Headphones', slug: 'headphones', description: 'Wired and wireless audio equipment', sort_order: 3 },
+    { name: 'Monitors', slug: 'monitors', description: '4K, curved, and gaming displays', sort_order: 4 },
+    { name: 'Keyboards', slug: 'keyboards', description: 'Mechanical and membrane keyboards', sort_order: 5 },
+    { name: 'Mice', slug: 'mice', description: 'Gaming and productivity mice', sort_order: 6 },
+    { name: 'Storage', slug: 'storage', description: 'SSDs, HDDs, and portable drives', sort_order: 7 },
+    { name: 'Accessories', slug: 'accessories', description: 'Cables, hubs, chargers and more', sort_order: 8 },
+  ];
+  const categories = await Category.insertMany(categoryData);
+  const catMap = {};
+  categories.forEach(c => { catMap[c.slug] = c._id; });
+  console.log('📂 Categories created');
+
+  // Products
+  const products = [
+    // LAPTOPS
+    {
+      name: 'ProBook Ultra 15', slug: 'probook-ultra-15', brand: 'NovaTech',
+      price: 1299.99, compare_price: 1499.99, cost_price: 850,
+      category_id: catMap['laptops'], stock: 24, is_featured: true,
+      short_description: '15.6" OLED display, Intel Core i7, 32GB RAM, 1TB NVMe SSD',
+      description: 'The ProBook Ultra 15 redefines professional performance. Featuring a stunning 15.6" OLED display with 100% DCI-P3 coverage, Intel Core i7-1360P processor, 32GB LPDDR5 RAM, and a blazing-fast 1TB NVMe SSD.',
+      specs: { display: '15.6" OLED 2880x1800', processor: 'Intel Core i7-1360P', ram: '32GB LPDDR5', storage: '1TB NVMe SSD', gpu: 'Intel Iris Xe', battery: '72Wh, up to 12hrs', weight: '1.6kg' },
+      tags: ['laptop', 'ultrabook', 'oled', 'professional'], rating: 4.7, review_count: 142, sold_count: 89,
+      images: ['https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800', 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?w=800'],
+    },
+    {
+      name: 'GameForce X17', slug: 'gameforce-x17', brand: 'StrikeZone',
+      price: 1899.99, compare_price: 2199.99, cost_price: 1300,
+      category_id: catMap['laptops'], stock: 12, is_featured: true,
+      short_description: '17.3" 165Hz QHD, RTX 4070, Intel i9, 32GB RAM, 2TB SSD',
+      description: 'Dominate every game with the GameForce X17. Powered by Intel Core i9-13900HX and NVIDIA RTX 4070 GPU.',
+      specs: { display: '17.3" QHD 165Hz', processor: 'Intel Core i9-13900HX', ram: '32GB DDR5', storage: '2TB NVMe SSD', gpu: 'NVIDIA RTX 4070 8GB', battery: '99Wh' },
+      tags: ['gaming', 'laptop', 'rtx'], rating: 4.8, review_count: 98, sold_count: 67,
+      images: ['https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=800', 'https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=800'],
+    },
+    {
+      name: 'SlimBook Air 13', slug: 'slimbook-air-13', brand: 'NovaTech',
+      price: 799.99, compare_price: 999.99, cost_price: 520,
+      category_id: catMap['laptops'], stock: 38, is_featured: false,
+      short_description: '13.3" IPS FHD, AMD Ryzen 7, 16GB RAM, 512GB SSD',
+      description: 'Ultra-portable and powerful, the SlimBook Air 13 is the perfect travel companion.',
+      specs: { display: '13.3" IPS 1920x1200', processor: 'AMD Ryzen 7 7730U', ram: '16GB LPDDR4X', storage: '512GB NVMe SSD', battery: '65Wh, up to 15hrs' },
+      tags: ['laptop', 'ultrabook', 'portable', 'amd'], rating: 4.5, review_count: 76, sold_count: 143,
+      images: ['https://images.unsplash.com/photo-1588702547919-26089e690ecc?w=800'],
+    },
+    // SMARTPHONES
+    {
+      name: 'Apex Pro Max', slug: 'apex-pro-max', brand: 'Apex',
+      price: 1099.99, compare_price: null, cost_price: 720,
+      category_id: catMap['smartphones'], stock: 50, is_featured: true,
+      short_description: '6.7" ProMotion AMOLED, 200MP camera, Snapdragon 8 Gen 3, 5000mAh',
+      description: 'The Apex Pro Max pushes boundaries with its 200MP camera system and Snapdragon 8 Gen 3 chipset.',
+      specs: { display: '6.7" AMOLED 120Hz', processor: 'Snapdragon 8 Gen 3', ram: '12GB', storage: '256GB', camera: '200MP triple', battery: '5000mAh 65W' },
+      tags: ['smartphone', '5g', 'flagship', 'camera'], rating: 4.9, review_count: 215, sold_count: 312,
+      images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800', 'https://images.unsplash.com/photo-1585060544812-6b45742d762f?w=800'],
+    },
+    {
+      name: 'VisionPhone 14', slug: 'visionphone-14', brand: 'VisionTech',
+      price: 899.99, compare_price: 999.99, cost_price: 580,
+      category_id: catMap['smartphones'], stock: 35, is_featured: true,
+      short_description: '6.1" Super Retina XDR, A17 chip, ProRAW camera, 48MP',
+      description: 'Stunning Super Retina XDR display with a versatile 48MP camera system.',
+      specs: { display: '6.1" OLED Super Retina XDR', processor: 'A17 Bionic', ram: '8GB', storage: '128GB', camera: '48MP main', battery: '3279mAh 20W' },
+      tags: ['smartphone', 'ios', 'flagship'], rating: 4.8, review_count: 330, sold_count: 445,
+      images: ['https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=800'],
+    },
+    // HEADPHONES
+    {
+      name: 'SoundMax Pro ANC', slug: 'soundmax-pro-anc', brand: 'AudioLabs',
+      price: 349.99, compare_price: 449.99, cost_price: 180,
+      category_id: catMap['headphones'], stock: 60, is_featured: true,
+      short_description: 'Premium ANC headphones, 40-hour battery, Hi-Res audio',
+      description: 'Industry-leading active noise cancellation meets audiophile-grade sound in the SoundMax Pro.',
+      specs: { type: 'Over-ear', drivers: '40mm custom', anc: 'Hybrid ANC', battery: '40hrs ANC on', bluetooth: '5.3', frequency: '4Hz-40kHz' },
+      tags: ['headphones', 'anc', 'wireless', 'premium'], rating: 4.7, review_count: 189, sold_count: 278,
+      images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800', 'https://images.unsplash.com/photo-1484704849700-f032a568e944?w=800'],
+    },
+    {
+      name: 'BassCore X2 TWS', slug: 'basscore-x2-tws', brand: 'AudioLabs',
+      price: 129.99, compare_price: 179.99, cost_price: 55,
+      category_id: catMap['headphones'], stock: 120, is_featured: false,
+      short_description: 'True wireless earbuds, deep bass, 32hr total battery',
+      description: 'Punchy bass and crystal-clear mids make the BassCore X2 the ultimate workout companion.',
+      specs: { type: 'In-ear TWS', drivers: '10mm', anc: 'ENC noise isolation', battery: '8hrs + 24hrs case', bluetooth: '5.2', ipx: 'IPX5' },
+      tags: ['earbuds', 'tws', 'bass', 'sport'], rating: 4.4, review_count: 203, sold_count: 521,
+      images: ['https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800'],
+    },
+    // MONITORS
+    {
+      name: 'UltraView 27 4K', slug: 'ultraview-27-4k', brand: 'ClearVision',
+      price: 499.99, compare_price: 649.99, cost_price: 300,
+      category_id: catMap['monitors'], stock: 20, is_featured: true,
+      short_description: '27" 4K IPS, 144Hz, HDR600, 1ms GTG, USB-C 90W',
+      description: 'Professional-grade 4K display with 144Hz refresh rate for both creative work and gaming.',
+      specs: { size: '27"', resolution: '3840x2160', panel: 'IPS', refresh: '144Hz', hdr: 'HDR600', response: '1ms GTG', ports: 'USB-C 90W, 2x HDMI 2.1, DP 1.4' },
+      tags: ['monitor', '4k', 'ips', 'gaming'], rating: 4.6, review_count: 87, sold_count: 134,
+      images: ['https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=800'],
+    },
+    // KEYBOARDS
+    {
+      name: 'MechType Pro RGB', slug: 'mechtype-pro-rgb', brand: 'KeyCraft',
+      price: 159.99, compare_price: 199.99, cost_price: 70,
+      category_id: catMap['keyboards'], stock: 45, is_featured: false,
+      short_description: 'TKL mechanical keyboard, Cherry MX Red, per-key RGB',
+      description: 'Tenkeyless layout with Cherry MX Red switches for lightning-fast actuation.',
+      specs: { layout: 'TKL 87 keys', switches: 'Cherry MX Red', backlight: 'Per-key RGB', connection: 'USB-C detachable', keycaps: 'PBT double-shot' },
+      tags: ['keyboard', 'mechanical', 'rgb', 'tkl'], rating: 4.6, review_count: 134, sold_count: 267,
+      images: ['https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800'],
+    },
+    // MICE
+    {
+      name: 'PrecisionClick Pro', slug: 'precisionclick-pro', brand: 'SwiftPoint',
+      price: 79.99, compare_price: 99.99, cost_price: 32,
+      category_id: catMap['mice'], stock: 80, is_featured: false,
+      short_description: '26000 DPI optical sensor, 8 buttons, lightweight 68g',
+      description: 'Tournament-grade precision meets feather-light design in the PrecisionClick Pro.',
+      specs: { sensor: '26000 DPI optical', buttons: '8 programmable', weight: '68g', connection: '2.4GHz wireless + USB-C', battery: '70hrs', polling: '1000Hz' },
+      tags: ['mouse', 'gaming', 'wireless', 'lightweight'], rating: 4.7, review_count: 156, sold_count: 389,
+      images: ['https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800'],
+    },
+    // STORAGE
+    {
+      name: 'SpeedDrive NVMe 1TB', slug: 'speeddrive-nvme-1tb', brand: 'DataFast',
+      price: 89.99, compare_price: 129.99, cost_price: 45,
+      category_id: catMap['storage'], stock: 100, is_featured: false,
+      short_description: 'PCIe 4.0 NVMe SSD, 7000MB/s read, 1TB',
+      description: 'Blazing-fast PCIe 4.0 NVMe SSD with sequential read speeds up to 7000MB/s.',
+      specs: { capacity: '1TB', interface: 'PCIe 4.0 x4 NVMe', read: '7000 MB/s', write: '6500 MB/s', form: 'M.2 2280', tbw: '600 TBW' },
+      tags: ['ssd', 'nvme', 'storage', 'pcie4'], rating: 4.8, review_count: 245, sold_count: 678,
+      images: ['https://images.unsplash.com/photo-1597852074816-d933c7d2b988?w=800'],
+    },
+    // ACCESSORIES
+    {
+      name: 'PowerHub 10-in-1', slug: 'powerhub-10-in-1', brand: 'ConnectPro',
+      price: 59.99, compare_price: 79.99, cost_price: 22,
+      category_id: catMap['accessories'], stock: 150, is_featured: false,
+      short_description: 'USB-C hub: 4K HDMI, 100W PD, USB 3.2, SD card, Ethernet',
+      description: '10 ports in a compact form: expand any laptop with HDMI 4K, 3x USB-A, 2x USB-C, SD/microSD, Ethernet, and 100W pass-through charging.',
+      specs: { ports: '10-in-1', hdmi: '4K@60Hz', usb: '3x USB-A 3.2 + 2x USB-C', pd: '100W pass-through', ethernet: 'Gigabit', sd: 'SD + microSD', material: 'Aluminum' },
+      tags: ['hub', 'usbc', 'adapter', 'ethernet'], rating: 4.5, review_count: 312, sold_count: 891,
+      images: ['https://images.unsplash.com/photo-1625723044792-44de16ccb4e9?w=800'],
+    },
+  ];
+
+  await Product.insertMany(products);
+  console.log(`📦 ${products.length} products created`);
+
+  // Coupons
+  await Coupon.insertMany([
+    { code: 'SAVE10', description: '10% off on all orders', type: 'percentage', value: 10, min_order: 0 },
+    { code: 'FLAT20', description: '$20 off orders over $100', type: 'fixed', value: 20, min_order: 100 },
+    { code: 'WELCOME15', description: '15% off for new customers', type: 'percentage', value: 15, min_order: 0 },
+  ]);
+  console.log('🎟️  Coupons created');
+
+  console.log('\n✅ Seeding complete!');
+  console.log(`🔑 Admin login: ${process.env.ADMIN_EMAIL || 'admin@techstore.com'} / ${process.env.ADMIN_PASSWORD || 'Admin@123456'}`);
+  await mongoose.disconnect();
+}
+
+seed().catch(err => { console.error(err); process.exit(1); });
